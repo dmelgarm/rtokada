@@ -1,0 +1,13 @@
+Diego Melgar & Brendan Crowell
+05/2013
+
+This code is still in research and has not been fine tuned or put in a user friendly mode.
+Nonetheless it works fine and has been used for publications. Briefly: you use batch_rtokada
+to run multiple inversions, this function invokes rtokada which performs the actual inversion.
+
+We are adding support for joint inversions with tide gauge or buoy data.
+
+If you use this please reference:
+
+1) Crowell, B.W., Y. Bock, and D. Melgar (2012), Real-time inversion of GPS data for finite fault modeling and rapid hazard assessment, Geophys. Res. Lett., 39, L09305, doi:10.1029/2012GL051318.
+2) Melgar, D., B.W. Crowell, Y. Bock, and J.S. Haase (2013), Rapid modeling of the 2011 Mw 9.0 Tohoku-oki earthquake with seismogeodesy, Geophys. Res. Lett., in revision.
