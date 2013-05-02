@@ -1,9 +1,10 @@
 Diego Melgar & Brendan Crowell
 04/2013
 
-This code is still in research and has not been fine tuned or put in a user friendly mode.
-Nonetheless it works fine and has been used for publications. Briefly: you use batch_rtokada
-to run multiple inversions, this function invokes rtokada which performs the actual inversion.
+This code is still in research and has not been fine tuned or put in a user 
+friendly mode. Nonetheless it works fine and has been used for publications.
+Briefly: you use batch_rtokada to run multiple inversions, this function 
+invokes rtokada which performs the actual inversion.
 
 We are adding support for joint inversions with tide gauge or buoy data.
 
