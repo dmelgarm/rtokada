@@ -1,4 +1,8 @@
 function [G]=okada_green(e,n,depth,strike,dip,W,L)
+
+%This is modified from Francois Beauducel's okada85 function available from
+%the mathworks file exchange
+
 %OKADA85 Surface deformation due to a finite rectangular source.
 %	[uE,uN,uZ,uZE,uZN,uNN,uNE,uEN,uEE] = OKADA85(E,N,...
 %	   DEPTH,STRIKE,DIP,LENGTH,WIDTH,RAKE,SLIP,OPEN,NU)

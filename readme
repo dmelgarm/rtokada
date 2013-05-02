@@ -3,8 +3,12 @@ Diego Melgar & Brendan Crowell
 
 This code is still in research and has not been fine tuned or put in a user 
 friendly mode. Nonetheless it works fine and has been used for publications.
-Briefly: you use batch_rtokada to run multiple inversions, this function 
-invokes rtokada which performs the actual inversion.
+Briefly: You compute Green functions with okada_green then you use batch_rtokada
+to run multiple inversions, this function  invokes rtokada which performs the 
+actual inversion.
+
+okada_green is modified from Francois Beauducel's okada85 fucntion available
+on the mathworks file exchange.
 
 We are adding support for joint inversions with tide gauge or buoy data.
 
