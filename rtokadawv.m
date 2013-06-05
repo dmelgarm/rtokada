@@ -1,4 +1,4 @@
-function varargout=rtokadawv(workpath,outpath,runName,runID,stasuffix,lambda,G,GSF,Gwv,weightflag,stations)
+function varargout=rtokadawv(workpath,outpath,runName,runID,stasuffix,lambda,G,GSF,Gwv,weightflag,stations,t_gauges,gauges)
 
 % 05/2013 (DM)
 %
@@ -18,7 +18,9 @@ cd(workpath)
 f2=load('faults_def_small.txt'); %No of fault elements
 ast=f2(1);%along strike elements
 adi=f2(2);%along dip elements
-
+[xs,ys,zs,xf1,xf2,xf3,xf4,yf1,yf2,yf3,yf4,zf1,zf2,zf3,zf4,strike,dip,len,width,area]=textread('small_fault.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
+[site latinv,loninv]=textread(stations,'%f %f %f');
+[latsf lonsf]=textread('seafloor.xy','%f%f');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Greens Function Calculation, faults file is as follows
 %Coordiantes of the centre of the patch, coordinates of the 4
@@ -122,11 +124,12 @@ fid2=fopen([outpath runName '.' runID '.disp'],'wt');
 fid3=fopen([outpath runName '.' runID '.sflr'],'wt');
 fid4=fopen([outpath runName '.' runID '.dtopo'],'wt');
 fid5=fopen([outpath runName '.' runID '.rake'],'wt');
+fid6=fopen([outpath runName '.' runID '.wave'],'wt');
 
 
-ydist = (loninv-lono)*llon/1000;
-xdist = (latinv-lato)*llat/1000;
-tdist = (xdist.^2+ydist.^2).^0.5;
+% ydist = (loninv-lono)*llon/1000;
+% xdist = (latinv-lato)*llat/1000;
+% tdist = (xdist.^2+ydist.^2).^0.5;
 
 %%%%%%
 %This is the weight matrix, which is currently not being used
@@ -174,13 +177,23 @@ for k = 1:1
             StaRem = [StaRem;j];
         end
     end
+    %Normalize weight of land GPS stations to a 1 %Maybe try weighting by
+    %the eman of the noise??
+    Stemp=1./Sxyz;
+    Stemp=Stemp./max(Stemp);
+    Sxyz=1./Stemp;
+    %Read gauges
     for j=1:length(gauges)
         %First entry is weight, rest is time series
-        [eta]=textread(['neufiles/' siterb '.' stasuffix '.txt'],'%f');
-        
+        [tg eta]=textread(['gauges/' gauges{j} '.txt'],'%f%f');
+        eta=eta(2:end);
+        w=ones(size(eta))/tg(1);
+        Sxyz=[Sxyz ; w];
         UD=[UD ; eta];
     end
-    
+    %Add tsunami GFs
+    G2=[G2 ; Gwv];
+    GS2=[GS2 ; Gwv];
     %Weight by station noise
     if weightflag==1
         W=diag(1./Sxyz);
@@ -190,18 +203,13 @@ for k = 1:1
     %%%%%%
     
     if (~isempty(UD))
-        if (~isempty(StaRem))
-            G2([3.*(StaRem-1)+1 3.*(StaRem-1)+2 3.*(StaRem-1)+3],:)=[];
-            GS2([3.*(StaRem-1)+1 3.*(StaRem-1)+2 3.*(StaRem-1)+3],:)=[];
-            C2([3.*(StaRem-1)+1 3.*(StaRem-1)+2 3.*(StaRem-1)+3],:)=[];
-            C2(:,[3.*(StaRem-1)+1 3.*(StaRem-1)+2 3.*(StaRem-1)+3])=[];
-        end
         UD2=[W*UD;TU];
         
         T2 = T*lambda;%Place smoothness constraint here
         G3=[W*G2;T2];%append the regularization onto the greens function
-        
+        tic
         S=lsqlin(G3,UD2,[],[],[],[],lb,ub);%solve for displacements, in mm
+        toc
         %S=lsqlin(G,UD,[],[],[],[],[],[]);%solve for displacements, in mm
         %S=G\UD;
         %         [U s V]=cgsvd(G,T);   %Get SVD
@@ -209,6 +217,13 @@ for k = 1:1
         %         S0=ones(length(lb),1);
         %         S = l1decode_pd(S0, G3, [], UD2);
         UP = GS2*S;%%%forward model with original green's function
+        ngps=size(G,1)/3;
+        %Divide into GPS and wave gauge data
+        UPgps=UP(1:ngps);
+        UDgps=UD(1:ngps);
+        UPwv=UP(ngps+1:end);
+        UDwv=UD(ngps+1:end);
+        %Get post-inversion metrics
         rms=(sum((UP-UD).^2)/length(UP)).^0.5;
         %get L2 norm of misfit
         L2=norm(W*UP-W*UD,2);
@@ -225,6 +240,11 @@ for k = 1:1
         Nhp=2;
         phi=(ndata+Ms-N);
         ABIC=phi*log10(2*pi)+phi*log10(L2^2+LS^2)-2*Ms*log10(lambda)+2*phi*log10(phi)+log10(norm(GW'*GW+T2'*T2,2))+phi+2*Nhp;
+        %Now split into GPS and wave gauge metrics
+        VRgps=sum((UDgps-UPgps).^2)/sum(UDgps.^2);
+        VRgps=(1-VRgps)*100;
+        VRwv=sum((UDwv-UPwv).^2)/sum(UDwv.^2);
+        VRwv=(1-VRwv)*100;
         %Sea floor displacements
         USF=GSF*S;
         
@@ -256,6 +276,8 @@ for k = 1:1
         varargout{6}=VR;
         varargout{7}=GCV;
         varargout{8}=ABIC;
+        varargout{9}=VRgps;
+        varargout{10}=VRwv;
         
         %Write model results
         for i=1:length(xs)
@@ -264,74 +286,37 @@ for k = 1:1
         nnn = 1;
         %Write displacements, observed and synthetic
         for i=1:length(site)
-            a1 = find(i == StaRem);
-            if (isempty(a1))
-                siter = site(i);
-                %sitera = char(siter);
-                %siterb = sprintf('%s',sitera);
-                siterb=num2str(siter);
-                fprintf(fid2,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latinv(i),loninv(i),UD((nnn-1)*3+2),UD((nnn-1)*3+1),UD((nnn-1)*3+3),UP((nnn-1)*3+2),UP((nnn-1)*3+1),UP((nnn-1)*3+3));
-                nnn = nnn+1;
-            end
+            siter = site(i);
+            siterb=num2str(siter);
+            fprintf(fid2,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latinv(i),loninv(i),UD((nnn-1)*3+2),UD((nnn-1)*3+1),UD((nnn-1)*3+3),UP((nnn-1)*3+2),UP((nnn-1)*3+1),UP((nnn-1)*3+3));
+            nnn = nnn+1;
         end
         %Write  3 component synthetic seafloor displacements
         nnn=1;
         for i=1:length(lonsf)
-            a1 = find(i == StaRem);
-            if (isempty(a1))
-                siter = i;
-                %sitera = char(siter);
-                %siterb = sprintf('%s',sitera);
-                siterb=num2str(siter);
-                fprintf(fid3,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latsf(i),lonsf(i),USF((nnn-1)*3+2),USF((nnn-1)*3+1),USF((nnn-1)*3+3));
-                nnn = nnn+1;
-            end
+            siter = i;
+            siterb=num2str(siter);
+            fprintf(fid3,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latsf(i),lonsf(i),USF((nnn-1)*3+2),USF((nnn-1)*3+1),USF((nnn-1)*3+3));
+            nnn = nnn+1;
         end
         %Write  GeoClaw dtopo type 3 file
+        for i=1:length(lonsf)
+            fprintf(fid4,'%1.0f %1.4f %1.4f %1.4f\n',0,lonsf(i),latsf(i),0);
+        end
         nnn=1;
         for i=1:length(lonsf)
-            a1 = find(i == StaRem);
-            if (isempty(a1))
-                siter = i;
-                %sitera = char(siter);
-                %siterb = sprintf('%s',sitera);
-                siterb=num2str(siter);
-                fprintf(fid4,'%1.0f %1.4f %1.4f %1.4f\n',0,lonsf(i),latsf(i),0);
-                nnn = nnn+1;
-            end
+            fprintf(fid4,'%1.0f %1.4f %1.4f %1.4f\n',1,lonsf(i),latsf(i),USF((nnn-1)*3+3));
+            nnn = nnn+1;
         end
+        %Write rake vector information
+        for i=1:length(xs)
+            
+            fprintf(fid5,'%1.4f %1.4f %1.4f %1.4f\n',xs(i),ys(i),rake_h(i),rake_amp(i));
+        end
+        %Write wave gauges, observed and synthetic time,observed,synthetic
         nnn=1;
-        for i=1:length(xs)
-            a1 = find(i == StaRem);
-            if (isempty(a1))
-                siter = i;
-                %sitera = char(siter);
-                %siterb = sprintf('%s',sitera);
-                siterb=num2str(siter);
-                fprintf(fid5,'%1.4f %1.4f %1.4f %1.4f\n',xs(i),ys(i),rake_h(i),rake_amp(i));
-            end
-        end
-        for i=1:length(lonsf)
-            a1 = find(i == StaRem);
-            if (isempty(a1))
-                siter = i;
-                %sitera = char(siter);
-                %siterb = sprintf('%s',sitera);
-                siterb=num2str(siter);
-                fprintf(fid4,'%1.0f %1.4f %1.4f %1.4f\n',1,lonsf(i),latsf(i),USF((nnn-1)*3+3));
-                nnn = nnn+1;
-            end
-        end
-    else
-        for i=1:length(xs)
-            fprintf(fid,'%1.0f %1.0f %1.5f %1.5f %1.2f %1.5f %1.5f %1.5f %1.4f\n',k,i,0,0,0,xs(i),ys(i),zs(i),0);
-        end
-        for i=1:length(site)
-            siter = site(i);
-            %sitera = char(siter);
-            %siterb = sprintf('%s',sitera);
-            siterb=num2str(siter);
-            fprintf(fid2,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latinv(i),loninv(i),0,0,0,0,0,0);
+        for i=1:length(t_gauges)
+            fprintf(fid6,'%1.4f %1.4f %1.4f\n',t_gauges(i),UD((3*ngps)+i),UP((3*ngps)+i));
         end
     end
 end
@@ -343,6 +328,8 @@ fclose(fid5);
 %Output to screen
 display(['   lambda = ' num2str(lambda)])
 display(['   VR = ' num2str(VR) '%'])
+display(['   VRgps = ' num2str(VRgps) '%'])
+display(['   VRwv = ' num2str(VRwv) '%'])
 display(['   || LM || = ' num2str(LS)])
 display(['   GCV = ' num2str(GCV)])
 display(['   ABIC = ' num2str(ABIC)])

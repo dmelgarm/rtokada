@@ -6,14 +6,14 @@ function wavegreen
 
 %Run parameters
 dt=15; %Sampling rate ins econds
-lt=3600; %length of GFs in seconds
-Nrecord=(3600/dt)+1; %length of time series
+lt=10*60; %length of GFs in seconds
+Nrecord=(lt/dt)+1; %length of time series
 Nf=189;%Number of fault planes
-Nsta=15; %Ignoring BY.MIC
+Nsta=16;
 dir='/Volumes/Elements/Tsunami/GFs/';  %maind irectory
 suffix='GF';
-sta_suffix='_60min';
-savef='~/Research/Data/Tohoku/RTOkada/tohoku_wvGF_60min';
+sta_suffix=['_' num2str(lt/60) 'min'];
+savef=['~/Research/Data/Tohoku/RTOkada/tohoku_wvGF_' num2str(lt/60) 'min'];
 datapath='/Users/dmelgarm/Research/Data/Tohoku/RTOkada/gauges/';
 %Load gauges table (GeoClaw gauge codes vs. actual gauge codes)
 [numg a a nameg a a]=textread('/Users/dmelgarm/Research/Data/Tohoku/Gauges/gauges.dat','%f%f%f%s%s%s');
@@ -33,7 +33,6 @@ for k=1:Nf
     %Read strike slip
     [sta amr a1 a2 a3 a4 a5]=textread([dir suffix 'ss_' subfault '/_output/fort.gauge'],'%f%f%f%f%f%f%f');
     staG=unique(sta);
-    staG=setxor(staG,1016); %Ignore BY.MIC
     Gsta=[];
     for k2=1:Nsta %Loop over all stations for that subfault
         i=find(sta==staG(k2)); %Get next stations data
@@ -57,7 +56,6 @@ for k=1:Nf
     %Read dip slip
     [sta amr a1 a2 a3 a4 a5]=textread([dir suffix 'ds_' subfault '/_output/fort.gauge'],'%f%f%f%f%f%f%f');
     staG=unique(sta);
-    staG=setxor(staG,1016); %Ignore BY.MIC
     Gsta=[];
     for k2=1:Nsta %Loop over all stations for that subfault
         i=find(sta==staG(k2));
@@ -74,6 +72,10 @@ for k=1:Nf
     end
     Gwv(:,2*k)=Gsta; %Add to main matrix
 end
-
+%Make vector of names
+for k=1:length(staG)
+    i=find(numg==staG(k));
+    gauges{k}=[nameg{i} sta_suffix];
+end
 %Write to file
-save(savef,'Gwv','tGF')
+save(savef,'Gwv','tGF','gauges')

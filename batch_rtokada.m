@@ -17,11 +17,10 @@ stasuffix='kal';
 workpath='/Users/dmelgarm/Research/Data/Tohoku/RTOkada'; 
 outpath='/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output/';
 %lambda=logspace(-0.30103,3.6989,200);
-lambda=logspace(-2,2,200);
+lambda=logspace(-2,0.69897,200);
 %lambda=logspace(-1,2,200);
 %lambda=logspace(0,log10(500),200);
 waveflag=1;   %Use wave gauges
-
 weightflag=1;
 N=length(lambda);
 cd(workpath)
@@ -34,6 +33,7 @@ load('tohoku_wvGF_60min.mat')
 Gp=G;
 Gs=GSF;
 Gw=Gwv;
+
 numsta=size(Gp,2)/3;
 %Get fault to output point distances
 lono = 143.05;%starting longitude (corresponding to x=0) - if using large latitude extent, set these to center of area
@@ -41,23 +41,23 @@ lato = 37.5;%starting latitude (corresponding to y=0)
 [llat,llon] = degreelen(lato);%lengths of degree of lat and lon
 [site latinv,loninv]=textread(stations,'%f %f %f');
 %Fault to station
-[xs,ys,zs,xf1,xf2,xf3,xf4,yf1,yf2,yf3,yf4,zf1,zf2,zf3,zf4,strike,dip,len,width,area]=textread('small_fault.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
-for i = 1:length(xs)
-    for j = 1:numsta
-        xrs(i,j) = (loninv(j)-xs(i))*llon;%x distance, in m
-        yrs(i,j) = (latinv(j)-ys(i))*llat;%y distance, in m
-        zrs(i,j) = -zs(i);%z distance, in m
-    end
-end
-% Fault to seafloor ditances
-[latsf lonsf]=textread('seafloor.xy','%f%f');
-for i = 1:length(xs)
-    for j = 1:length(latsf)
-        xrs(i,j) = (lonsf(j)-xs(i))*llon;%x distance, in m
-        yrs(i,j) = (latsf(j)-ys(i))*llat;%y distance, in m
-        zrs(i,j) = -zs(i);%z distance, in m
-    end
-end
+% [xs,ys,zs,xf1,xf2,xf3,xf4,yf1,yf2,yf3,yf4,zf1,zf2,zf3,zf4,strike,dip,len,width,area]=textread('small_fault.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
+% for i = 1:length(xs)
+%     for j = 1:numsta
+%         xrs(i,j) = (loninv(j)-xs(i))*llon;%x distance, in m
+%         yrs(i,j) = (latinv(j)-ys(i))*llat;%y distance, in m
+%         zrs(i,j) = -zs(i);%z distance, in m
+%     end
+% end
+% % Fault to seafloor ditances
+% [latsf lonsf]=textread('seafloor.xy','%f%f');
+% for i = 1:length(xs)
+%     for j = 1:length(latsf)
+%         xrs(i,j) = (lonsf(j)-xs(i))*llon;%x distance, in m
+%         yrs(i,j) = (latsf(j)-ys(i))*llat;%y distance, in m
+%         zrs(i,j) = -zs(i);%z distance, in m
+%     end
+% end
 
 %batch run
 for k=1:N
@@ -78,7 +78,7 @@ for k=1:N
     if waveflag==0 %Only dispalcement ivnersion
         [l(k) L2(k) LS(k) Mo(k) Mw(k) VR(k) GCV(k) ABIC(k)]=rtokada(workpath,outpath,runName,runID{k},stasuffix,lambda(k),Gp,Gs,weightflag,stations);
     else %Also ivnert wave gauges
-        [l(k) L2(k) LS(k) Mo(k) Mw(k) VR(k) GCV(k) ABIC(k)]=rtokadawv(workpath,outpath,runName,runID{k},stasuffix,lambda(k),Gp,Gs,Gw,weightflag,stations);
+        [l(k) L2(k) LS(k) Mo(k) Mw(k) VR(k) GCV(k) ABIC(k)]=rtokadawv(workpath,outpath,runName,runID{k},stasuffix,lambda(k),Gp,Gs,Gw,weightflag,stations,tGF,gauges);
     end
     %toc
 end

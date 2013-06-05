@@ -1,11 +1,11 @@
 function plot_lcurve
 
-N=200;
-maxmod=120;
+N=20;
+maxmod=1000;
 fcut=20;
 
 %runName='RTOkada'
-runName='RTOkada_HiResW'
+runName='RTOkada_wv'
 %runName='Checkerboard'
 cd('/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output')
 
@@ -27,7 +27,7 @@ for k=1:N
     ABIC(k)=n(9);
 end
 % clf
-% ha = tight_subplot(2, 2, 0.08, 0.1, 0.2);
+% ha = tight_subplot(2, 2, 0.08, 0.1, 0
 % 
 % axes(ha(1));
 % i=find(Lm<12e10);

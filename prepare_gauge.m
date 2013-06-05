@@ -31,9 +31,14 @@ for k=1:length(sta_obs)
     i=find(~isnan(etai));
     etaout=[weights(k) etai(i)-etai(i(1))];
     tout=[weights(k) ti(i)];
+    if k==8 %Manually edit BY.IWC
+        i=find(tout<=1485);
+        tout=tout(i);
+        etaout=etaout(i);
+    end
     plot(tout(2:end),etaout(2:end))
     title(sta_obs{k})
-    pause(1)
+    pause()
     out=[tout' etaout'];
     save([outdir sta_obs{k} suffix '.txt'],'out','-ascii')
 end
