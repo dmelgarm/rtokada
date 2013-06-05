@@ -5,7 +5,7 @@ maxmod=120;
 fcut=20;
 
 %runName='RTOkada'
-runName='RTOkada_HiResW_kal'
+runName='RTOkada_HiResW'
 %runName='Checkerboard'
 cd('/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output')
 

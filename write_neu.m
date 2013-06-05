@@ -1,7 +1,11 @@
 function write_neu
 
+%DMM 03/2013
+%
+% Read in data from standard matlab structure and output to NEU format
+
 %suffix='raw';
-suffix='kal_gps'
+suffix='kal_weightgps'
 cd('/Users/dmelgarm/Research/Data/Tohoku')
 %load tohoku_gps_all
 %coseis2=coseis;
@@ -44,7 +48,7 @@ for k=1:N
         a=0;
     else
         stak=stak+1;
-        P=[1 coseis.N(k) coseis.E(k) coseis.U(k) coseis2.stdn(k) coseis2.stde(k) coseis2.stdu(k)];
+        P=[1 coseis.Nkal(k) coseis.Ekal(k) coseis.Ukal(k) coseis2.stdn(k) coseis2.stde(k) coseis2.stdu(k)];
         save([num2str(coseis.gname(k)) '.' suffix '.txt'],'P','-ascii')
         sta(stak)=coseis.gname(k);
         lat(stak)=coseis.lat(k);
