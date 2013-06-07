@@ -179,8 +179,10 @@ for k = 1:1
     end
     %Normalize weight of land GPS stations to a 1 %Maybe try weighting by
     %the eman of the noise??
+    gpsmult=1;
     Stemp=1./Sxyz;
     Stemp=Stemp./max(Stemp);
+    Stemp=Stemp*gpsmult;
     Sxyz=1./Stemp;
     %Read gauges
     for j=1:length(gauges)

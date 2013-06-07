@@ -4,11 +4,11 @@ function prepare_gauge
 %
 %Prepare wave gauges for ingestion into inverse problem
 
-maxt=50*60;
+maxt=10*60;
 dt=15;
 outdir='/Users/dmelgarm/Research/Data/Tohoku/RTOkada/gauges/';
 obsdir='/Users/dmelgarm/Research/Data/Tohoku/Gauges';
-suffix='_50min';
+suffix=['_' num2str(maxt/60) 'min'];
 gaugedir='/Users/dmelgarm/Research/Data/Tohoku/Gauges';
 gauges=[1002 1004 1005 1009 1010 1011 1015 1016 1017 1018 1019 1020 1021 1023 1028 1029];
 weights=[1 1 5 5 5 5 1 5 5 1 1 1 1 1 10 10];
@@ -31,14 +31,38 @@ for k=1:length(sta_obs)
     i=find(~isnan(etai));
     etaout=[weights(k) etai(i)-etai(i(1))];
     tout=[weights(k) ti(i)];
-    if k==8 %Manually edit BY.IWC
-        i=find(tout<=1485);
-        tout=tout(i);
-        etaout=etaout(i);
+    if k==8 %Manually edit BY.IWC to digitized values from Satake et al. (2013)
+        i=find(to>=1480);
+        tinsert=[];
+        etainsert=[];
+        tinsert=[tinsert 1635];
+        etainsert=[etainsert 2.75];
+        tinsert=[tinsert 1690];
+        etainsert=[etainsert 3.3];
+        tinsert=[tinsert 1740];
+        etainsert=[etainsert 3.5];
+        tinsert=[tinsert 1845];
+        etainsert=[etainsert 3.8];
+        tinsert=[tinsert 1850];
+        etainsert=[etainsert 3.8];       
+        tinsert=[tinsert 1860];
+        etainsert=[etainsert 5];      
+        tinsert=[tinsert 1875];
+        etainsert=[etainsert 4.9];        
+        tinsert=[tinsert 1890];
+        etainsert=[etainsert 5];
+        to=[to(1:i(1)) ; tinsert' ; to(i(2):end)];
+        etao=[etao(1:i(1)) ; etainsert' ; etao(i(2):end)];
+
+        tinterp=0:15:3600;
+        etai=interp1(to,etao,tinterp,'spline');
+        etaout=interp1(tinterp,etai,tout(2:end));
+        etaout=[weights(k) etaout];
+        plot(tout(2:end)/60,etaout(2:end))
+        pause
     end
     plot(tout(2:end),etaout(2:end))
     title(sta_obs{k})
-    pause()
     out=[tout' etaout'];
     save([outdir sta_obs{k} suffix '.txt'],'out','-ascii')
 end

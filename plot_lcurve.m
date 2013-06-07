@@ -1,8 +1,9 @@
 function plot_lcurve
 
-N=20;
-maxmod=1000;
-fcut=20;
+N=200;
+%maxmod=550;  %for _wv
+maxmod=400;  %for _wv_highGPS
+%fcut=50;
 
 %runName='RTOkada'
 runName='RTOkada_wv'
@@ -26,6 +27,10 @@ for k=1:N
     GCV(k)=n(8);
     ABIC(k)=n(9);
 end
+i=find(Lm<maxmod);
+Lm=Lm(i);
+lambda=lambda(i);
+L2=L2(i);
 % clf
 % ha = tight_subplot(2, 2, 0.08, 0.1, 0
 % 
@@ -100,7 +105,8 @@ ykappa=interp1(ppx,kappa,x);
 i=find(~isnan(ykappa));
 x=x(i);
 ykappa=ykappa(i);
-yf=fbutter(ykappa,x(2)-x(1),6,fcut,'low');
+%yf=fbutter(ykappa,x(2)-x(1),6,fcut,'low');
+yf=ykappa;
 kappa=yf;
 ppx=x;
 

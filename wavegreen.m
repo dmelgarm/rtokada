@@ -6,7 +6,7 @@ function wavegreen
 
 %Run parameters
 dt=15; %Sampling rate ins econds
-lt=20*60; %length of GFs in seconds
+lt=50*60; %length of GFs in seconds
 Nrecord=(lt/dt)+1; %length of time series
 Nf=189;%Number of fault planes
 Nsta=16;
@@ -35,6 +35,9 @@ for k=1:Nf
     staG=unique(sta);
     Gsta=[];
     for k2=1:Nsta %Loop over all stations for that subfault
+        if k2==8
+            a=0;
+        end
         i=find(sta==staG(k2)); %Get next stations data
         t=a1(i);
         eta=(a5(i));
