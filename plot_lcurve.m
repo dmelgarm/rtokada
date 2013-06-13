@@ -2,11 +2,11 @@ function plot_lcurve
 
 N=200;
 %maxmod=550;  %for _wv
-maxmod=400;  %for _wv_highGPS
+maxmod=450;  %for _wv_highGPS
 %fcut=50;
 
 %runName='RTOkada'
-runName='RTOkada_wv'
+runName='RTOkada_wv_test'
 %runName='Checkerboard'
 cd('/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output')
 

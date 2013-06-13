@@ -5,15 +5,16 @@ function wavegreen
 %Assemble matrix of wave gauge green functions
 
 %Run parameters
+makeSS=0; %Include strike-slip GFs?
 dt=15; %Sampling rate ins econds
-lt=50*60; %length of GFs in seconds
+lt=60*60; %length of GFs in seconds
 Nrecord=(lt/dt)+1; %length of time series
 Nf=189;%Number of fault planes
 Nsta=16;
 dir='/Volumes/Elements/Tsunami/GFs/';  %maind irectory
 suffix='GF';
 sta_suffix=['_' num2str(lt/60) 'min'];
-savef=['~/Research/Data/Tohoku/RTOkada/tohoku_wvGF_' num2str(lt/60) 'min'];
+savef=['~/Research/Data/Tohoku/RTOkada/tohoku_wvGFnoSS_' num2str(lt/60) 'min'];
 datapath='/Users/dmelgarm/Research/Data/Tohoku/RTOkada/gauges/';
 %Load gauges table (GeoClaw gauge codes vs. actual gauge codes)
 [numg a a nameg a a]=textread('/Users/dmelgarm/Research/Data/Tohoku/Gauges/gauges.dat','%f%f%f%s%s%s');
@@ -47,15 +48,18 @@ for k=1:Nf
         j=find(numg==staG(k2)); %What is the wave gauge code?
         [tdata etadata]=textread([datapath nameg{j} sta_suffix '.txt'],'%f%f'); %load actual data
         tdata=tdata(2:end); %First sample is inversion weight
-        etaG=interp1(tG,etaG,tdata); %Reinterpolate to what is actually int he data
+        etaG=interp1(tG,etaG,tdata); %Reinterpolate to what is actually in the data
         %
         Gsta=[Gsta ; etaG]; %Append current station
         if k==1 %Save time vector for GFs
             tGF=[tGF ; tdata];
         end
     end
-    G(:,2*k-1)=Gsta; %Add to main matrix
-    
+    if makeSS==1%Include strike-slip GFs
+        G(:,2*k-1)=Gsta; 
+    else %Make em zeros
+       G(:,2*k-1)=zeros(size(Gsta));
+    end
     %Read dip slip
     [sta amr a1 a2 a3 a4 a5]=textread([dir suffix 'ds_' subfault '/_output/fort.gauge'],'%f%f%f%f%f%f%f');
     staG=unique(sta);
