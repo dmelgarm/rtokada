@@ -7,7 +7,7 @@ function wavegreen
 %Run parameters
 makeSS=0; %Include strike-slip GFs?
 dt=15; %Sampling rate ins econds
-lt=60*60; %length of GFs in seconds
+lt=10*60; %length of GFs in seconds
 Nrecord=(lt/dt)+1; %length of time series
 Nf=189;%Number of fault planes
 Nsta=16;

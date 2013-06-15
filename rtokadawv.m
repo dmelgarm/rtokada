@@ -1,30 +1,37 @@
 function varargout=rtokadawv(workpath,outpath,runName,runID,stasuffix,lambda,G,GSF,Gwv,stations,t_gauges,gauges,dataflag)
 
-% 05/2013 (DM)
+% 05/2013 (D.Melgar)
 %
 % A static slip inversion routine with laplacian regularization and bounds on the lateral and bottom edges of a fault.
-%
-% This is a modified version of B.Crowell's rtokada routine modified to include wave gauges in the inversion process and generally 
-% streamlined and optimized for batch runs. THIS DEPRECATES THE ORIGINAL rtokada() FUNCTION.
+% This is a heavily edited version of B.Crowell's rtokada routine modified to include wave gauges in the inversion process 
+% and to compute smoothing metrics like Akaike's information criterion and the generalized cross-validation parameter. Also,
+% it has been generally  streamlined and optimized for batch runs. THIS DEPRECATES THE ORIGINAL rtokada() FUNCTION.
 %
 % INPUT VARS
-% workpath
-% outpath
-% runName
-% runID
-% stasuffix
-% lambda
-% G
-% GSF
-% Gwv
-% weightflag
-% stations
-% t_gauges
-% gauges
-% dataflag
+% workpath - Where are teh necessary files for the run held at
+% outpath - Where will the output be written to
+% runName - String identifying the run name
+% runID - Number of this particular run
+% stasuffix - Suffix to append to station filename at time of read
+% lambda - Smoothing parameter
+% G - Green functions for coseismic offsets
+% GSF - Green fuctions for seaflorr displacements
+% Gwv - Green functions for wave gauges
+% stations - File containing coordinates of coseismic offset stations
+% t_gauges - Time vector for wave gauges
+% gauges - Vector containing name of wave gauge stations
+% dataflag - [usegps usewave] determines which data is sued in inversion
 %
 % OUTPUT VARS
-
+% varargout{1}=lambda - Smoothing parameter used
+% varargout{2}=L2 - Inversion misfit || Gm - d ||
+% varargout{3}=LS - Solution semi-norm || Lm ||
+% varargout{4}=Mo - Solution moment
+% varargout{5}=Mw - Solution moment magnitude
+% varargout{6}=GCV - Generalized cross-validation parameter
+% varargout{7}=AIC - Akaike's information criterion 
+% varargout{8}=VRgps - Variance reduction on coseismic offsets
+% varargout{9}=RMSwv - RMS misfit onw ave gauges
 
 
 
@@ -53,7 +60,7 @@ NW=adi-1;
 NL=ast-1; %No of fault patches
 k=1;
 T=[];
-for j = 1:NW%put 1 to clamp top or 2 to unclamp top
+for j = 1:NW
     for i = 1:NL
         for m = 1:2
             index1 = (j-1)*NL+i;
@@ -105,17 +112,14 @@ for j=1:NW
             %These are for dip slip (mostly thrust)
             lb(kk+1,1)=-1;
             ub(kk+1,1)=100;
-            %             lb(kk+1,1)=-1;  %For checkerboard stuff
-            %             ub(kk+1,1)=2000;
         end
         kk=kk+2;
     end
 end
 
 %READ DATA
-U=[]; %Data vector
-Sxyz=[];
-StaRem=[];
+Ugps=[]; %Data vector
+Sxyz_gps=[];
 %Read land station coseismic offsets
 for j = 1:length(site)
     siter = site(j);
@@ -127,55 +131,52 @@ for j = 1:length(site)
     uz=dz;
     %Normalize the data weights
     sd=min([sx sy sz]);
-    sx=sx/sd;
-    sy=sy/sd;
-    sz=sz/sd;
-    Sxyz=[Sxyz ; sx ; sy ; sz];
+    sx=(sx/sd);
+    sy=(sy/sd);
+    sz=(sz/sd);
+    Sxyz_gps=[Sxyz_gps ; sx ; sy ; sz];
     Ucurrent = [ux;uy;uz];
-    U=[U;Ucurrent];
-end
-%Normalize weight of land GPS stations to a 1 %Maybe try weighting by
-%the eman of the noise??
-if usegps==0 %Don't care about fitting coseismics
-    gpsmult=1e-20;
-else %Fit Coseismics at normal level
-    gpsmult=1;
-end
-if usewave==0
-    wavemult=1e-20;
-else
-    wavemult=1;
+    Ugps=[Ugps;Ucurrent];
 end
 
 %Read wave gauges
+Ueta=[];
+Sxyz_eta=[];
 for j=1:length(gauges)
     %First entry is weight, rest is time series
     [tg eta]=textread(['gauges/' gauges{j} '.txt'],'%f%f');
     eta=eta(2:end);
-    w=(ones(size(eta))/tg(1))/wavemult;
-    Sxyz=[Sxyz ; w];
-    U=[U ; eta];
+    w=(ones(size(eta))/tg(1));
+    Sxyz_eta=[Sxyz_eta ; w];
+    Ueta=[Ueta ; eta];
 end
-%Create matrix of station weights
-W=diag(1./Sxyz);
 
 % INVERSION
-Ginv = G; 
-%Add tsunami GFs
-Ginv=[Ginv ; Gwv]; %Will be modified by data weights, etc.
+Sxyz=[];
+if usegps==1   %Use coseismic offsets
+    Ginv = G; 
+    U=Ugps;
+    Sxyz=[Sxyz ; Sxyz_gps];
+else
+    Ginv=[];
+    U=[];
+end
+if usewave==1   %Use wave gauge measurements
+    Ginv=[Ginv ; Gwv];
+    U=[U ; Ueta];
+    Sxyz=[Sxyz ; Sxyz_eta];
+end  
+W=diag(1./Sxyz);
+Uinv=[W*U;Tzeros];   %Add weights and zeros for regularization
 Gforward=Ginv; %Won't me modified further
+Gall=[G ; Gwv]; %GFs used to compute the fits to the different data sets even if they aren't used in the inversion
 %Apply weights to data and add zero rows
-Uinv=[W*U;Tzeros];
-T=T*lambda; %Apply smoothing parameter
-Ginv=[W*Ginv;T];%append the regularization onto the greens function
+
+Tinv=T*lambda; %Apply smoothing parameter
+Ginv=[W*Ginv;Tinv];%append the regularization onto the greens function
 S=lsqlin(Ginv,Uinv,[],[],[],[],lb,ub);%solve for fault motions, in mm
 Uforward = Gforward*S;%%%forward model with original green's function
-ngps=size(G,1)/3;
-%Divide into GPS and wave gauge data
-Uforward_gps=Uforward(1:ngps);
-U_gps=U(1:ngps);
-Uforward_wv=Uforward(ngps+1:end);
-U_wv=U(ngps+1:end);
+ngps=size(G,1);
 %Get post-inversion metrics
 %get L2 norm of misfit
 L2=norm(W*U-W*Uforward,2);
@@ -184,18 +185,21 @@ LS=norm(T*S,2);
 %get generalized cross validation value
 ndata=length(U);
 GW=W*Gforward;
-Gsharp=(GW'*GW+T'*T)\GW';
+Gsharp=(GW'*GW+Tinv'*Tinv)\GW';
 GCV=(ndata*(L2^2))/(trace(eye(size(GW*Gsharp))-GW*Gsharp)^2);
 %Get Akaike
 Ms=max(size(T));
 N=max(size(S));
 Nhp=2;
 phi=(ndata+Ms-N);
-ABIC=phi*log10(2*pi)+phi*log10(L2^2+LS^2)-2*Ms*log10(lambda)+2*phi*log10(phi)+log10(norm(GW'*GW+T'*T,2))+phi+2*Nhp;
+AIC=phi*log10(2*pi)+phi*log10(L2^2+(lambda^2)*(LS^2))-2*Ms*log10(lambda)+2*phi*log10(phi)+log10(norm(GW'*GW+(lambda^2)*(T'*T),2))+phi+2*Nhp;
 %Now split into GPS and wave gauge metrics
-VRgps=sum((U_gps-Uforward_gps).^2)/sum(U_gps.^2);
+Uforward=Gall*S;
+Uforward_gps=Uforward(1:ngps);
+Uforward_wv=Uforward(ngps+1:end);
+VRgps=sum((Ugps-Uforward_gps).^2)/sum(Ugps.^2);
 VRgps=(1-VRgps)*100;
-RMSwv=(sum((Uforward_wv-U_wv).^2)/length(Uforward_wv)).^0.5;
+RMSwv=(sum((Uforward_wv-Ueta).^2)/length(Uforward_wv)).^0.5;
 %Sea floor displacements
 USF=GSF*S;
 %Split into strike-slip and dip-slip to compute rake etc.
@@ -220,7 +224,7 @@ varargout{3}=LS;
 varargout{4}=Mo;
 varargout{5}=Mw;
 varargout{6}=GCV;
-varargout{7}=ABIC;
+varargout{7}=AIC;
 varargout{8}=VRgps;
 varargout{9}=RMSwv;
 
@@ -232,15 +236,15 @@ fid4=fopen([outpath runName '.' runID '.dtopo'],'wt');
 fid5=fopen([outpath runName '.' runID '.rake'],'wt');
 fid6=fopen([outpath runName '.' runID '.wave'],'wt');
 for i=1:length(xs)
-    fprintf(fid,'%1.0f %1.0f %1.5f %1.5f %1.2f %1.5f %1.5f %1.5f\n',k,i,S1(i),S2(i),Mw,xs(i),ys(i),zs(i));
+    fprintf(fid,'%1.5f %1.5f %1.2f %1.5f %1.5f %1.5f\n',S1(i),S2(i),Mw,xs(i),ys(i),zs(i));
 end
 nnn = 1;
 %Write displacements, observed and synthetic
 for i=1:length(site)
     siter = site(i);
     siterb=num2str(siter);
-    fprintf(fid2,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latinv(i),loninv(i),U((nnn-1)*3+2),...
-        U((nnn-1)*3+1),U((nnn-1)*3+3),Uforward((nnn-1)*3+2),Uforward((nnn-1)*3+1),Uforward((nnn-1)*3+3));
+    fprintf(fid2,'%s %1.0f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f %1.4f\n',siterb,k,latinv(i),loninv(i),Ugps((nnn-1)*3+2),...
+        Ugps((nnn-1)*3+1),Ugps((nnn-1)*3+3),Uforward((nnn-1)*3+2),Uforward((nnn-1)*3+1),Uforward((nnn-1)*3+3));
     nnn = nnn+1;
 end
 %Write  3 component synthetic seafloor displacements
@@ -265,10 +269,10 @@ for i=1:length(xs)
     
     fprintf(fid5,'%1.4f %1.4f %1.4f %1.4f\n',xs(i),ys(i),rake_h(i),rake_amp(i));
 end
-%Write wave gauges, observed and synthetic time,observed,synthetic
+%Write wave gauges, observed and synthetic: time,observed,synthetic
 nnn=1;
 for i=1:length(t_gauges)
-    fprintf(fid6,'%1.4f %1.4f %1.4f\n',t_gauges(i),U((3*ngps)+i),Uforward((3*ngps)+i));
+    fprintf(fid6,'%1.4f %1.4f %1.4f\n',t_gauges(i),Ueta(i),Uforward(ngps+i));
 end
 fclose(fid);
 fclose(fid2);
@@ -280,7 +284,8 @@ fclose(fid5);
 display(['   lambda = ' num2str(lambda)])
 display(['   VRgps = ' num2str(VRgps) '%'])
 display(['   RMSwv = ' num2str(RMSwv) ''])
+display(['   || Gm-d || = ' num2str(L2)])
 display(['   || LM || = ' num2str(LS)])
 display(['   GCV = ' num2str(GCV)])
-display(['   ABIC = ' num2str(ABIC)])
+display(['   AIC = ' num2str(AIC)])
 display(['   Mw = ' num2str(Mw)])

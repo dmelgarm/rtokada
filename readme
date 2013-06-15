@@ -1,18 +1,148 @@
-Diego Melgar & Brendan Crowell
-04/2013
+RTOKADA - README , otherwise good luck.
 
-This code is still in research and has not been fine tuned or put in a user 
-friendly mode. Nonetheless it works fine and has been used for publications.
-Briefly: You compute Green functions with okada_green then you use batch_rtokada
-to run multiple inversions, this function  invokes rtokada which performs the 
-actual inversion.
+Diego Melgar & Brendan Crowell 
+06/2013 
+dmelgarm[at]ucsd.edu
 
-okada_green is modified from Francois Beauducel's okada85 fucntion available
-on the mathworks file exchange.
+This code computes static slip inversions with Laplacian (second order Tikhonov) regularization using
+coseismic offsets and off-shore wave gauge measurements. The inversion can be eprformed with just
+coseismic offsets, just wave gauges or the joint data set. If you want to know more about the code I
+suggest you take a look at the references.
 
-We are adding support for joint inversions with tide gauge or buoy data.
+This code is perenially in research so you should always do your due dilligence and double check
+and validate results.  I've put a little effort into making it user friendly but my main goal is my own
+research not making your life easier. That being said I think the code works fine and has been used for
+multiple publications. I am glad to help and do often respond to email.
+
+I have included a folder with sample input files so that you may know how to format your own data.
+
+The program flow is as follows:
+
+1) Get your coseismic offset data into the "neu" format, there's an example file '157.neu' in the samples 
+folder. It's a one column file:
+	-column 1 is a token integer, any integer (yes this is dumb i'll get rid of it someday)
+	-column 2 is north offset in metres
+	-column 3 is east offset in metres
+	-column 4 is vertical offset (up is +)  in metres
+	-column 5 is north data weight (I use the std. deviation of the pre-event noise)
+	-column 6 is east data weight
+	-column 7 is vertical data weight
+	
+2) Make a file 'stations.xy' (also in the samples folder) with the stationc oordinates, it's a 3 column file
+	-column 1 is station name (make sure it's consistent with the neu file name)
+	-column 2 is station longitude
+	-column 3 is station latitude
+
+3) Make a file with coordinates at which you require output on the deformation fo the seafloor. Theres
+a file 'seafloor.xy' in the samples folder. It's a 2 column folder.
+	column 1 is latitude
+	column 2 is longitude
+	
+4) Make your fault. I suggest starting from Slab 1.0 (Hayes et al, 2012) and then following the method in
+Romano et al. (2009) to make the subfaults, you might have another way. In any case, you should make 
+two files, the first is 'faultdef.txt' (also in samples folder) there should be 2 numbers in this file the first
+is the # of along strike subfaults, the second one is the # of along dip subfaults
+
+The second file is the subfault informaiton, 'fault.txt' in the samples folder. It's a 20 column file
+	** Coordiantes of the centre of the patch
+		- column 1 is longitude
+		- column 2 is latitude
+		- column 3 is depth (should be negative)
+	** Coordinates of the 4 corners
+		- column 4 is longitude of 1st corner
+		- column 5 is longitude of 2nd corner
+		- column 6 is longitude of 3rd corner
+		- column 7 is longitude of 4th corner
+		- column 8 is latitude of 1st corner
+		- column 9 is latitude of 2nd corner
+		- column 10 is latitude of 3rd corner
+		- column 11 is latitude of 4th corner
+		- column 12 is depth of 1st corner
+		- column 13 is depth of 2nd corner
+		- column 14 is depth of 3rd corner
+		- column 15 is depth of 4th corner
+	** Subfault geometry
+		column 16 is strike
+		column 17 is dip
+		column 18 is along strike length
+		column 19 is along dip length
+		column 20 is total area
+		
+5) Prepare your wave gauge data, make a file like "gauges.dat" in the samples folder it's a 5 column file
+	-Column 1 is an integer used as staton identifier
+	-Column 2 is station longitude
+	-Column 3 is station latitude
+	-Column 4 is a string with station name
+	-Column 5 is a string witht he station description
+
+Then assemble your data in individual 2 column files like the file 'OB.TM1' in the samples folder. It's a 7 
+column file
+	-Column 1 is month
+	-Column 1 is day
+	-Column 1 is year
+	-Column 1 is hour
+	-Column 1 is minute
+	-Column 1 is second
+	-Column 1 is sea surface elveation measurement
+
+6) Now prepare your green functions, you need 3 sets of GFs, one for the coseismic offsets, one for the
+points where you require seafloor deformation and one for the wave gauges. Run the following 2 functions:
+	-coseisgreen() will make teh coseismic and seafloor GFs assuming you have prepared allt he files succesfully.
+	-wavegreen() will make the wavegauge GFs, againa ssuming all files are kosher
+	
+7) Run the inversion. To do so you run batch_rtokada(), the parameters that need to be set are in the comments
+
+8) Look at output, each inversion will make 7 output files; samples of all of these are in the samples folder:
+	.log file with information ont he run
+	.slip file with the slip inversion results
+		-column 1 is amount of strike-slip motion (in mm)
+		-column 2 is amount of dip-slip motion (in mm)
+		-column 3 is moment magnitude fo the whole inversion
+		-column 4 is subfault longitude
+		-column 5 is subfault latitiude
+		-column 6 is subfault depth
+	.disp file with the observed and synthetic coseismic offsets
+		-column 1 is station name
+		-column 2 is one of thos estray integers, ignore it
+		-column 3 is station latitude
+		-column 4 is station longitude
+		-column 5 is north observed coseismic offset
+		-column 6 is east observed coseismic offset
+		-column 7 is vertical observed coseismic offset
+		-column 8 is north synthetic coseismic offset
+		-column 9 is east synthetic coseismic offset
+		-column 10 is vertical synthetic coseismic offset
+	.rake file with the rake angle at each subfault (this is used for plotting with psvelo in GMT)
+	.sflr file with neu motions of the requested points in the seafloor
+	.dtopo file is initial condition file (dtopo) for GeoClaw tsunami simulations (topotype 3)
+	.wave is synthetic wave gauge calculations at all stations
+		
+9) Plot output. I also include a GMT script RTO_tohoku.gmt  that uses these files as input for plotting. I don't 
+include the topography grids used in the plots, so you'll have to make your own.
+
+Happy hunting!
+
+
+
 
 If you use this please reference:
 
-1) Crowell, B.W., Y. Bock, and D. Melgar (2012), Real-time inversion of GPS data for finite fault modeling and rapid hazard assessment, Geophys. Res. Lett., 39, L09305, doi:10.1029/2012GL051318.
-2) Melgar, D., B.W. Crowell, Y. Bock, and J.S. Haase (2013), Rapid modeling of the 2011 Mw 9.0 Tohoku-oki earthquake with seismogeodesy, Geophys. Res. Lett., doi:10.1002/grl.50590.
+1) Crowell, B.W., Y. Bock, and D. Melgar (2012), Real-time inversion of GPS data for finite fault modeling 
+and rapid hazard assessment, Geophys. Res. Lett., 39, L09305, doi:10.1029/2012GL051318. 
+
+2)Melgar, D., B.W. Crowell, Y. Bock, and J.S. Haase (2013), Rapid modeling of the 2011 Mw 9.0 Tohoku-oki
+earthquake with seismogeodesy, Geophys. Res. Lett., doi:10.1002/grl.50590.
+
+3)Melgar, D. and Y.Bock (in prep), Near-Field Tsunami Models with Rapid Earthquake Source Inversions from 
+Land and Ocean Based Observations: The Potential for Forecast and Warning.
+
+Acknowledgments: 
+- okada_green is modified from Francois Beauducel's okada85 fucntion available on the mathworks file 
+exchange. 
+- DM has done most of the development of the code found in this repo but I started from BC's kernel of 
+code which allowed me to hit the ground running and without which this would have been tedious.
+- The idea and development of this code has benefited from fruitful discussions with Randy LeVeque.
+
+References
+- Hayes et al. (2012)
+- Romano et al. (2012)

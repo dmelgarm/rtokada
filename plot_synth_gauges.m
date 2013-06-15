@@ -5,7 +5,7 @@ function plot_synth_gauges(num)
 % Plot and compare wave gauge results of the inversion
 
 %read data
-runName='RTOkada_wv';
+runName='RTOkada_kalwv10min';
 outpath='/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output/';
 [t obs syn]=textread([outpath runName '.' num '.wave'],'%f%f%f');
 cd(outpath)

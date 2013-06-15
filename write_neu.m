@@ -11,7 +11,7 @@ cd('/Users/dmelgarm/Research/Data/Tohoku')
 %coseis2=coseis;
 %load  tohoku_gps_statics
 
-%Process file sfor 138 kalman stations
+%Process files for 138 kalman stations
 load tohokukal
 tcomp=157;
 i=find(tohoku.process==1)

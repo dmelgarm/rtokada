@@ -1,5 +1,9 @@
 function varargout=rtokada(workpath,outpath,runName,runID,stasuffix,lambda,G,GSF,weightflag,stations)
 
+%~~~~~~~~~~~~~~~~  DEPRECATED! USE rtokadawv() INSTEAD!  ~~~~~~~~~~~~~~~~~~~~~~~~
+_________________________________________________________________________________
+
+
 
 %This program performs the inverse problem to solve for okada dislocations
 %defined by the user

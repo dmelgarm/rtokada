@@ -1,12 +1,11 @@
 function plot_lcurve
 
-N=200;
-%maxmod=550;  %for _wv
-maxmod=450;  %for _wv_highGPS
+N=119;
+maxmod=1000; 
 %fcut=50;
 
 %runName='RTOkada'
-runName='RTOkada_wv_test'
+runName='RTOkada_kalwv10min'
 %runName='Checkerboard'
 cd('/Users/dmelgarm/Research/Data/Tohoku/RTOkada/output')
 
@@ -24,12 +23,14 @@ for k=1:N
     lambda(k)=n(2);
     Lm(k)=n(4);
     L2(k)=n(3);
-    GCV(k)=n(8);
+    GCV(k)=n(10);
     ABIC(k)=n(9);
 end
 i=find(Lm<maxmod);
 Lm=Lm(i);
 lambda=lambda(i);
+GCV=GCV(i);
+ABIC=ABIC(i);
 L2=L2(i);
 % clf
 % ha = tight_subplot(2, 2, 0.08, 0.1, 0
@@ -80,8 +81,8 @@ L2=L2(i);
 % xlabel('\lambda')
 % xlim([min(lambda) max(lambda)])
 
-clf
-ha = tight_subplot(2, 1, 0, 0.1, 0.3);
+figure
+ha = tight_subplot(2, 2, [0.1 0.1], 0.1, 0.3);
 %Smooth the curve
 % fcut=5;
 % L2=L2(2:end);
@@ -145,12 +146,24 @@ xl=[min(L2) max(L2)];
 xlim(xl);
 ylim([min(Lm) max(Lm)]);
 
-axes(ha(2));
+axes(ha(3));
 semilogx(10.^ppx,abs(kappa),'b','LineWidth',2)
 xlabel('||Gm-d||_2')
 ylabel('\kappa')
 xlim(xl);
 ylim([min(kappa) max(kappa)]);
 
+axes(ha(2))
+loglog(lambda,GCV,'LineWidth',2)
+ylabel('V_0(\alpha)')
+xlabel('\lambda')
+display(['lambda = ' num2str(reg_c)]);
+xlim([min(lambda) max(lambda)])
+
+axes(ha(4))
+semilogx(lambda,ABIC,'m','LineWidth',2)
+ylabel('AIC')
+xlabel('\lambda')
+xlim([min(lambda) max(lambda)])
 
 display(['lambda = ' num2str(reg_c)]);
